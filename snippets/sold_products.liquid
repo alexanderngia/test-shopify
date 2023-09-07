@@ -1,0 +1,203 @@
+<link rel="stylesheet" href="https://shopiapps.in/sold_products/admin/assets/css/emoticons.css">
+<div class="sold_mainbox">
+{% assign pro_sold_meta = product.metafields.sa_productdata.sa_sold %}
+{% assign store_meta = shop.metafields.sa_productdata.sa_shopdata | split: "&&"%}
+
+{%assign pro_sold = store_meta[0] | split: "="%}
+{%assign pro_instock = store_meta[1] | split: "="%}
+{%assign meta_type = store_meta[2] | split: "="%}
+{%assign is_limit = store_meta[3] | split: "="%}
+  
+{%assign pro_sold = pro_sold[1] | split: "##"%} 
+{%assign pro_instock = pro_instock[1] | split: "##"%}
+{%assign is_limit = is_limit[1] | split: "##"%}
+  
+{% if is_limit[0] == '1' and is_limit[1] == '' %}
+  {% assign is_limit[1] = 0 %}
+{% endif %}
+
+<style>
+  .sold_pro{ color: #f18d00; }
+  label.sold.sold_pro,.pro-inventory{ display: block;margin-bottom:5px; }
+  .emoticon{vertical-align: top;}
+  .hide{display:none;}
+  .inline{display:inline;}
+  b{font-weight:bold;}
+</style>
+  
+{% assign inline = '' %}
+{% if pro_instock[2] == '1' %}
+  {% assign inline = 'inline' %}
+  <style>
+    label.sold.sold_pro,.pro-inventory{display:inline;}
+  </style>
+{% endif %}
+  
+{% if meta_type[1] == 'product'%}
+  
+<div id="variant-inventory" class="sold_box_sub for_product">
+  {% for variant in product.variants %}
+    {% if variant.inventory_management == "shopify" and variant.inventory_quantity > 0 %}
+      <input type="hidden" class="pro_stock" value="{{ variant.inventory_quantity }}" >
+    {% endif %}
+  {% endfor %}
+  
+  {%if pro_instock[0] == '1' %}
+  
+  <span class="pro-inventory {{inline}}" style="display:none">&nbsp{%if pro_instock[1] != null %}{{pro_instock[1]}}{% else %}in stock{% endif %} </span>
+  {% endif %}
+  
+  {% if pro_instock[2] == '1' and pro_sold[0] == '1' and pro_instock[0] == '1' %}{% if pro_sold_meta != null and pro_instock[1] != null %}<span class="separator" style='display:none;'>/</span>{% endif %}{% endif %}
+  
+  {% if pro_sold_meta != null and  pro_sold[0] == '1' %}
+  <span class="sold_pro {{inline}}">{%if pro_sold[1] != '' %}<span class='{{pro_sold[1]}}'>&nbsp;</span>{% endif %}<b>{{pro_sold_meta}}</b> {%if pro_sold[2] != null %}{{pro_sold[2]}}{% else %}sold{% endif %}</span>
+  {% endif %}
+</div>
+{% endif %}
+  
+{% if meta_type[1] == 'variant'%}
+<div class="sold_box_sub for_variant">
+  <input type="hidden" value="{{product.variants.first.id}}" id="selectedVariant">
+  
+  {% for variant in product.variants %}
+  	
+    {% if variant.inventory_management == "shopify" and variant.inventory_quantity > 0 %}
+     <span class="sa_{{ variant.id}} sa_variantStock {{ inline }} {%if pro_instock[0] == '0' %} hide {% endif %}" style="display:none" inv='{{ variant.inventory_quantity }}'><b>{{ variant.inventory_quantity }}</b> {%if pro_instock[1] != null %}{{pro_instock[1]}}{% else %}in stock{% endif %}</span>
+    {% endif %}
+    <input type="hidden" name="sa_sold" value="{{ variant.metafields.sa_productdata.sa_sold }}" id="sa_{{ variant.id}}">
+  {% endfor %}  
+  
+  {% if pro_instock[2] == '1' and pro_sold[0] == '1' and pro_instock[0] == '1' %} <span class="separator" style="display: none;">/</span>{% endif %}
+  
+  {% if pro_sold[0] == '1' %}
+    <label class="sold sold_pro {{inline}}" style="display:none">{%if pro_sold[1] != '' %}<span class='{{pro_sold[1]}}'>&nbsp;</span>{% endif %}<span class="variant-meta sold_pro"></span>&nbsp;{%if pro_sold[2] != null %}{{pro_sold[2]}}{% else %}sold{% endif %}</label>
+  {% endif %}
+</div>
+{% endif %}
+  
+<script type="text/javascript">
+  
+function getParameterByName(name) {
+  name = name.replace(/[\[]/, "\\[").replace(/[\]]/, "\\]");
+  var regex = new RegExp("[\\?&]" + name + "=([^&#]*)"),
+      results = regex.exec(location.search);
+  return results === null ? "" : decodeURIComponent(results[1].replace(/\+/g, " "));
+}
+var last_id = '0';
+window.onload = function() {
+  
+  {% if is_limit[0] == '1' %}
+  	var limit = {{is_limit[1]}};
+  {% endif %}
+  
+  if($(".sold_box_sub").hasClass("for_product")){
+    /* Total Product In stock */
+    var total_product=0;
+    $(".pro_stock").each(function(){
+      total_product = parseInt(total_product) + parseInt($(this).val());
+    });
+
+    {% if is_limit[0] == '1' %}
+      if(limit < total_product){
+          total_product = 0;
+      }
+    {% endif %}
+
+    if(total_product >0){
+
+      $(".pro-inventory").prepend('<b>'+total_product+'</b>');
+      $(".pro-inventory").show();
+        $('.separator').show();
+    }
+  	/* end */
+  }
+
+  if($(".sold_box_sub").hasClass("for_variant")){
+    var variantId_in_URL = getParameterByName("variant");
+    variantId_in_URL = $.trim(variantId_in_URL);
+    if(variantId_in_URL == ""){
+      var variantId = $('#selectedVariant').val();
+    } else {
+      variantId = variantId_in_URL;
+    }
+    
+    
+    /* check first variant is available or not */
+    if($(".sa_"+variantId).length == 1){
+      var inv = $(".sa_"+variantId).attr('inv');
+      
+      {% if is_limit[0] == '1' %}
+      	if(limit < inv) $(".sa_"+variantId).addClass('hide');
+      {% endif %}
+    }
+    
+    
+    if($(".sa_"+variantId).length == 1 && !$(".sa_"+variantId).hasClass('hide')){
+      $(".sa_"+variantId).show();
+      last_id = variantId;
+    }
+    var first_varitant_sold_val = $("#sa_"+variantId).val();
+    first_varitant_sold_val = parseInt(first_varitant_sold_val);
+    
+    
+    if(first_varitant_sold_val > 0){
+      if(!$(".sa_"+variantId).hasClass('hide')){
+        $(".separator").show();
+      }
+      $("#sa_"+variantId).show();
+      $(".variant-meta").html('<b>'+first_varitant_sold_val+'</b>');      
+      $(".sold.sold_pro").show();
+    }   
+    
+$(".single-option-selector").unbind().change(function(){
+      variantId=getParameterByName("variant");
+      variantId = $.trim(variantId);
+      
+      if(variantId == ''){
+        variantId= $('select[name=id]').val();
+      }
+
+      $(".sa_variantStock").hide();
+      $(".separator").hide();
+      var len = $(".sa_"+variantId).length;
+    
+      var curr_variant_available_qty_val = $(".sa_"+variantId).val();
+    
+      if($(".sa_"+variantId).length == 1){
+        
+        if(last_id != variantId){
+          var inv = $(".sa_"+variantId).attr('inv');
+          {% if is_limit[0] == '1' %}
+            if(limit < inv) $(".sa_"+variantId).addClass('hide');
+          {% endif %}
+        
+        	if(!$(".sa_"+variantId).hasClass('hide')){
+         
+          		$(".sa_"+variantId).show();
+        	}
+        }
+        curr_variant_available_qty_val = parseInt(curr_variant_available_qty_val);
+      }
+
+      var curr_varitant_sold_val = $("#sa_"+variantId).val();
+      curr_varitant_sold_val = parseInt(curr_varitant_sold_val);
+     
+      if(curr_varitant_sold_val > 0 && last_id != variantId){ 
+        if(!$(".sa_"+variantId).hasClass('hide')){
+          $(".separator").show();
+        }        
+        $(".variant-meta").html('<b>'+curr_varitant_sold_val+'</b>');
+        $(".sold.sold_pro").show();
+        $(".variant-meta").show();
+      } else {
+        $(".variant-meta").hide();
+        $(".sold.sold_pro").hide();
+        $(".variant-meta").html("0");
+      }
+      last_id = variantId;
+    });
+  }
+}
+</script>
+
+</div>

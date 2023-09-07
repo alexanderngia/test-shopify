@@ -1,0 +1,19 @@
+<script>
+    var SCTParams = {
+        "id" : "a9e2777b587594718a0e1b8e27ad5f49",
+        "appFolder" : "sales-countdown-timer",
+        "apiScript" : "{{ 'api.jquery.js' | shopify_asset_url }}",
+        "product" : {{ product | json }},
+        "collection": {{ collection.id | json }},
+        "template": {{ template.name | json }},
+      	"page": {{ page.handle | json }}
+    }
+    if (SCTParams.product !== null) {
+        var collectionsArr = {{ product.collections | json }};
+        var collectionsObj = {};
+        collectionsArr.forEach(function (col) {
+            collectionsObj[col.id] = col;
+        });
+        SCTParams.product.collections = collectionsObj;
+    }
+</script>
